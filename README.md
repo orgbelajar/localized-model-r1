@@ -1,22 +1,22 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Template ini menyediakan pengaturan minimal untuk menjalankan React di Vite dengan HMR (Hot Module Replacement) serta beberapa aturan dasar ESLint.
 
-Currently, two official plugins are available:
+Saat ini, terdapat dua plugin resmi yang tersedia:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md), yang menggunakan [Babel](https://babeljs.io/) untuk Fast Refresh.
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc), yang menggunakan [SWC](https://swc.rs/) untuk Fast Refresh.
 
-## Expanding the ESLint configuration
+## Memperluas Konfigurasi ESLint
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+Jika Anda sedang mengembangkan aplikasi untuk produksi, disarankan untuk memperbarui konfigurasi agar mendukung aturan linting yang lebih cerdas dengan TypeScript:
 
-- Configure the top-level `parserOptions` property like this:
+- Konfigurasikan properti `parserOptions` di tingkat atas seperti berikut:
 
 ```js
 export default tseslint.config({
   languageOptions: {
-    // other options...
+    // opsi lainnya...
     parserOptions: {
       project: ['./tsconfig.node.json', './tsconfig.app.json'],
       tsconfigRootDir: import.meta.dirname,
@@ -25,24 +25,24 @@ export default tseslint.config({
 })
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+- Ganti `tseslint.configs.recommended` dengan `tseslint.configs.recommendedTypeChecked` atau `tseslint.configs.strictTypeChecked`.
+- Opsional: tambahkan `...tseslint.configs.stylisticTypeChecked`.
+- Instal [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) dan perbarui konfigurasi ESLint:
 
 ```js
 // eslint.config.js
 import react from 'eslint-plugin-react'
 
 export default tseslint.config({
-  // Set the react version
+  // Atur versi React yang digunakan
   settings: { react: { version: '18.3' } },
   plugins: {
-    // Add the react plugin
+    // Tambahkan plugin React
     react,
   },
   rules: {
-    // other rules...
-    // Enable its recommended rules
+    // aturan lainnya...
+    // Aktifkan aturan yang direkomendasikan oleh plugin React
     ...react.configs.recommended.rules,
     ...react.configs['jsx-runtime'].rules,
   },
