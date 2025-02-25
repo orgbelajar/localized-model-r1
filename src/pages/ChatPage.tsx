@@ -4,6 +4,7 @@ import { ChatMessage } from "~/components/ChatMessage";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import ollama from "ollama";
+import { ThoughtMessage } from "~/components/ThoughtMessage";
 
 type Message = {
   role: "user" | "assistant";
@@ -23,6 +24,7 @@ const chatHistory: Message[] = [
 const ChatPage = () => {
   const [messageInput, setMessageInput] = useState("");
   const [streamedMessage, setStreamedMessage] = useState("");
+  const [streamedThought, setStreamedThought] = useState("");
 
   const handleSubmit = async () => {
     alert("chat");
@@ -39,13 +41,40 @@ const ChatPage = () => {
     });
 
     let fullContent = "";
+    let fullThought = "";
+
+    /**
+     * mode thought (think)
+     * mode jawab (message)
+     * parameter finish think ketika bertemu tag </think>
+     */
+    let outputMode: "think" | "message" = "think"; //defaultnya think
 
     for await (const part of stream) {
       const messageContent = part.message.content;
-      
-      fullContent += messageContent;
-      
-      setStreamedMessage(fullContent);
+
+      if (outputMode === "think") {
+        if (
+          !(
+            messageContent.includes("<think>") ||
+            messageContent.includes("</think>")
+          )
+        ) {
+          fullThought += messageContent;
+        }
+
+        setStreamedThought(fullThought);
+
+        if (messageContent.includes("</think>")) {
+          outputMode = "message";
+        }
+      } else {
+        fullContent += messageContent;
+        setStreamedMessage(fullContent);
+      }
+
+      // fullContent += messageContent;
+      // setStreamedMessage(fullContent);
     }
   };
 
@@ -63,6 +92,8 @@ const ChatPage = () => {
               content={message.content}
             />
           ))}
+
+          {!!streamedThought && <ThoughtMessage thought={streamedThought} />}
 
           {!!streamedMessage && (
             <ChatMessage role="assistant" content={streamedMessage} />
