@@ -1,10 +1,12 @@
-import { Menu } from "lucide-react";
+//import { Menu } from "lucide-react";
 import { useState } from "react";
 import { ChatMessage } from "~/components/ChatMessage";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import ollama from "ollama";
 import { ThoughtMessage } from "~/components/ThoughtMessage";
+import { db } from "~/lib/dexie";
+import { useParams } from "react-router";
 
 type Message = {
   role: "user" | "assistant";
@@ -26,11 +28,20 @@ const ChatPage = () => {
   const [streamedMessage, setStreamedMessage] = useState("");
   const [streamedThought, setStreamedThought] = useState("");
 
+  const params = useParams(); //dari dynamic routing
+
   const handleSubmit = async () => {
-    alert("chat");
+    const threadId = params.threadId as string;
+    // buat message user
+    await db.createMessage({
+      content: messageInput,
+      role: "user",
+      thought: "",
+      thread_id: threadId,
+    });
 
     const stream = await ollama.chat({
-      model: "deepseek-r1:7b",
+      model: "deepseek-r1:1.5b",
       messages: [
         {
           role: "user",
@@ -72,10 +83,14 @@ const ChatPage = () => {
         fullContent += messageContent;
         setStreamedMessage(fullContent);
       }
-
-      // fullContent += messageContent;
-      // setStreamedMessage(fullContent);
     }
+
+    await db.createMessage({
+      content: fullContent,
+      role: "assistant",
+      thought: fullThought,
+      thread_id: threadId,
+    });
   };
 
   return (
