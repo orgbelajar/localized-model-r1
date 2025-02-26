@@ -62,7 +62,7 @@ class ChatDB extends Dexie {
   async createMessage(
     message: Pick<DEX_Message, "content" | "role" | "thought" | "thread_id">
   ) {
-    const messageId = crypto.randomUUID();
+    const messageId = `msg-${nanoid(16)}`;
 
     // 1. buat message
     // 2. update thread (updated_at) menjadi paling atas di sidebar
@@ -83,6 +83,13 @@ class ChatDB extends Dexie {
     });
 
     return messageId;
+  }
+
+  async getMessageForThread(threadId: string) {
+    return this.messages
+      .where("thread_id")
+      .equals(threadId)
+      .sortBy("created_at");
   }
 }
 
