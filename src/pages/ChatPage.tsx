@@ -1,5 +1,5 @@
 //import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { ChatMessage } from "~/components/ChatMessage";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
@@ -29,6 +29,8 @@ const ChatPage = () => {
   const [streamedMessage, setStreamedMessage] = useState("");
   const [streamedThought, setStreamedThought] = useState("");
 
+  const scrollToBottomRef = useRef<HTMLDivElement>(null);
+
   const params = useParams(); //dari dynamic routing
 
   const messages = useLiveQuery(
@@ -55,6 +57,8 @@ const ChatPage = () => {
       ],
       stream: true, //mengirim perbagian
     });
+
+    setMessageInput("");
 
     let fullContent = "";
     let fullThought = "";
@@ -101,10 +105,19 @@ const ChatPage = () => {
     setStreamedMessage("");
   };
 
+  /* akan scroll ke bawah sampai browser menemukan div ref={scrollToBottomRef} */
+  const handleScrollToBottom = () => {
+    scrollToBottomRef.current?.scrollIntoView();
+  };
+
+  useLayoutEffect(() => {
+    handleScrollToBottom();
+  }, [streamedMessage, streamedThought, messages]);
+
   return (
     <div className="flex flex-col flex-1">
       <header className="flex items-center px-4 h-16 border-b">
-        <h1 className="text-xl font-bold ml-4">AI Chat Dashboard</h1>
+        <h1 className="text-xl font-bold ml-4">PUSINFOLAHTA TNI AI</h1>
       </header>
       <main className="flex-1 overflow-auto p-4 w-full">
         <div className="mx-auto space-y-4 pb-20 max-w-screen-md">
@@ -122,6 +135,8 @@ const ChatPage = () => {
           {!!streamedMessage && (
             <ChatMessage role="assistant" content={streamedMessage} />
           )}
+
+          <div ref={scrollToBottomRef}></div>
         </div>
       </main>
       <footer className="border-t p-4">

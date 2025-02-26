@@ -8,7 +8,7 @@ export const ThoughtMessage = (props: ThoughtMessageProps) => {
   return (
     <div>
       <span className="italic text-sm px-2 py-1 bg-secondary rounded-lg">
-        AI thought:
+        Saya Mikir Dulu Bos 🤔...
       </span>
       <div className="p-4 relative rounded text-muted-foreground text-sm flex">
         <Separator
