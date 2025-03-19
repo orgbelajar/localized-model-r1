@@ -1,37 +1,20 @@
-//import { Menu } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { ChatMessage } from "~/components/ChatMessage";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
-import ollama from "ollama";
-import { ThoughtMessage } from "~/components/ThoughtMessage";
+// import { ThoughtMessage } from "~/components/ThoughtMessage";
 import { db } from "~/lib/dexie";
 import { useParams } from "react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 
-// type Message = {
-//   role: "user" | "assistant";
-//   content: string;
-// };
-
-// const chatHistory: Message[] = [
-//   { role: "assistant", content: "Hello! How can I assist you today?" },
-//   { role: "user", content: "Can you explain what React is?" },
-//   {
-//     role: "assistant",
-//     content:
-//       "React is a popular JavaScript library for building user interfaces. It was developed by Facebook and is widely used for creating interactive, efficient, and reusable UI components. React uses a virtual DOM (Document Object Model) to improve performance by minimizing direct manipulation of the actual DOM. It also introduces JSX, a syntax extension that allows you to write HTML-like code within JavaScript.",
-//   },
-// ];
-
 const ChatPage = () => {
   const [messageInput, setMessageInput] = useState("");
-  const [streamedMessage, setStreamedMessage] = useState("");
-  const [streamedThought, setStreamedThought] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const scrollToBottomRef = useRef<HTMLDivElement>(null);
 
-  const params = useParams(); //dari dynamic routing
+  const params = useParams(); // Dari dynamic routing
 
   const messages = useLiveQuery(
     () => db.getMessageForThread(params.threadId as string),
@@ -39,85 +22,72 @@ const ChatPage = () => {
   );
 
   const handleSubmit = async () => {
-    // buat message user
-    await db.createMessage({
-      content: messageInput,
-      role: "user",
-      thought: "",
-      thread_id: params.threadId as string,
-    });
+    if (!messageInput.trim()) return;
 
-    const stream = await ollama.chat({
-      model: "deepseek-r1:1.5b",
-      messages: [
-        {
-          role: "user",
-          content: messageInput.trim(),
+    setIsLoading(true);
+    setError(""); // Reset error state
+
+    try {
+      // Simpan pesan pengguna ke database lokal
+      await db.createMessage({
+        content: messageInput,
+        role: "user",
+        thought: "",
+        thread_id: params.threadId as string,
+      });
+
+      // Kirim pertanyaan ke backend
+      const response = await fetch("http://localhost:3001/api/query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      ],
-      stream: true, //mengirim perbagian
-    });
+        body: JSON.stringify({ question: messageInput }),
+      });
 
-    setMessageInput("");
+      const data = await response.json();
 
-    let fullContent = "";
-    let fullThought = "";
-
-    /**
-     * mode thought (think)
-     * mode jawab (message)
-     * parameter finish think ketika bertemu tag </think>
-     */
-    let outputMode: "think" | "message" = "think"; //defaultnya think
-
-    for await (const part of stream) {
-      const messageContent = part.message.content;
-
-      if (outputMode === "think") {
-        if (
-          !(
-            messageContent.includes("<think>") ||
-            messageContent.includes("</think>")
-          )
-        ) {
-          fullThought += messageContent;
-        }
-
-        setStreamedThought(fullThought);
-
-        if (messageContent.includes("</think>")) {
-          outputMode = "message";
-        }
-      } else {
-        fullContent += messageContent;
-        setStreamedMessage(fullContent);
+      if (!data.success) {
+        throw new Error(
+          data.message || "Terjadi kesalahan saat memproses pertanyaan."
+        );
       }
+
+      // Simpan pesan asisten ke database lokal
+      await db.createMessage({
+        content: data.data,
+        role: "assistant",
+        thought: "",
+        thread_id: params.threadId as string,
+      });
+    } catch (error) {
+      console.error("Error:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan yang tidak diketahui."
+      );
+    } finally {
+      setIsLoading(false);
+      setMessageInput("");
     }
-
-    await db.createMessage({
-      content: fullContent,
-      role: "assistant",
-      thought: fullThought,
-      thread_id: params.threadId as string,
-    });
-
-    setStreamedThought("");
-    setStreamedMessage("");
   };
 
-  /* akan scroll ke bawah sampai browser menemukan div ref={scrollToBottomRef} */
+  /* Akan scroll ke bawah sampai browser menemukan div ref={scrollToBottomRef} */
   const handleScrollToBottom = () => {
     scrollToBottomRef.current?.scrollIntoView();
   };
 
   useLayoutEffect(() => {
     handleScrollToBottom();
-  }, [streamedMessage, streamedThought, messages]);
+  }, [messages]);
 
   return (
     <div className="flex flex-col flex-1">
       <header className="flex items-center px-4 h-16 border-b">
-        <h1 className="text-xl font-bold ml-4">PUSINFOLAHTA TNI AI</h1>
+        <h1 className="text-xl font-bold ml-4">
+          AI ENSIKLOPEDIA ALUTSISTA TNI
+        </h1>
       </header>
       <main className="flex-1 overflow-auto p-4 w-full">
         <div className="mx-auto space-y-4 pb-20 max-w-screen-md">
@@ -130,10 +100,11 @@ const ChatPage = () => {
             />
           ))}
 
-          {!!streamedThought && <ThoughtMessage thought={streamedThought} />}
-
-          {!!streamedMessage && (
-            <ChatMessage role="assistant" content={streamedMessage} />
+          {/* Tampilkan pesan error jika ada */}
+          {error && (
+            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
           )}
 
           <div ref={scrollToBottomRef}></div>
@@ -147,9 +118,37 @@ const ChatPage = () => {
             rows={5}
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
+            disabled={isLoading}
           />
-          <Button onClick={handleSubmit} type="button">
-            Kirim
+          <Button onClick={handleSubmit} type="button" disabled={isLoading}>
+            {isLoading ? (
+              <div className="flex items-center">
+                <span>Memproses...</span>
+                {/* Tambahkan spinner */}
+                <svg
+                  className="animate-spin ml-2 h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </div>
+            ) : (
+              "Kirim"
+            )}
           </Button>
         </div>
       </footer>
